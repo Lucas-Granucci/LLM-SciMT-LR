@@ -1,0 +1,30 @@
+name: llm-scimt
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  # Python
+  - python=3.11
+  
+  # Basic packages
+  - numpy
+  - matplotlib
+  - tqdm
+  - pip
+  
+  # Pip packages
+  - pip:
+    # PyTorch with CUDA
+    - --extra-index-url https://download.pytorch.org/whl/cu126
+    - torch
+    
+    # Core ML packages
+    - transformers
+    - datasets
+    - peft
+    - trl
+    - bitsandbytes
+    
+    # Utilities
+    - sacrebleu
