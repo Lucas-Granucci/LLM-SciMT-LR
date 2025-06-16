@@ -1,5 +1,4 @@
-/data/
+/emea_data/
+/output/
 /model_cache/
-/wandb/
-/gemma3 4b-finetuning/
 /pycache/
