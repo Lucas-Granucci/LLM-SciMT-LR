@@ -1,12 +1,14 @@
+import json
 import asyncio
+from tqdm import tqdm
 from googletrans import Translator
 
-DATASET_UTILIZATION = 0.033  # amount of entire dataset used
+from config import *
 
 # =============================== Load evaluation data =============================== #
 
 with open("emea_data/en-et/test_source.txt", "r", encoding="utf-8") as file:
-    sentences = file.readlines()
+    sentences = [json.loads(line) for line in file]
 
 sentences = sentences[: int(len(sentences) * DATASET_UTILIZATION)]
 
@@ -18,7 +20,7 @@ async def translate_and_write_batches(sentences, batch_size, output_file):
 
         loop = asyncio.get_event_loop()
 
-        for i in range(0, len(sentences), batch_size):
+        for i in tqdm(range(0, len(sentences), batch_size)):
             sent_batch = sentences[i : i + batch_size]
 
             translations = await translator.translate(sent_batch, dest="et")
@@ -32,7 +34,7 @@ async def translate_and_write_batches(sentences, batch_size, output_file):
 def write_to_file(path, lines):
     with open(path, "a", encoding="utf-8") as file:
         for line in lines:
-            file.write(line + "\n")
+            file.write(json.dumps(line) + "\n")
 
 
 if __name__ == "__main__":

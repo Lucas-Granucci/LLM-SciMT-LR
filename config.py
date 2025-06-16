@@ -6,6 +6,7 @@ from transformers import BitsAndBytesConfig
 DATA_DIR = "emea_data/en-et"
 SOURCE_LANG = "English"
 TARGET_LANG = "Estonian"
+DATASET_UTILIZATION = 0.033  # amount of entire dataset used
 # ================================== #
 
 CACHE_DIR = "./model_cache"

@@ -7,8 +7,6 @@ from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 from config import *
 
-DATASET_UTILIZATION = 0.033  # amount of entire dataset used
-
 # ================================ Load training data ================================ #
 
 logging.info(f"Loading source and target files from {DATA_DIR}...")
@@ -16,10 +14,10 @@ logging.info(f"Loading source and target files from {DATA_DIR}...")
 
 def load_and_prepare_data():
     with open(f"{DATA_DIR}/train_source.txt", "r", encoding="utf-8") as file:
-        source = file.readlines()
+        source = [json.loads(line) for line in file]
 
     with open(f"{DATA_DIR}/train_target.txt", "r", encoding="utf-8") as file:
-        target = file.readlines()
+        target = [json.loads(line) for line in file]
 
     data = [{"source": s.strip(), "target": t.strip()} for s, t in zip(source, target)]
     data = data[: int(len(data) * DATASET_UTILIZATION)]
@@ -104,7 +102,7 @@ training_args = SFTConfig(
     logging_dir=os.path.join(OUTPUT_DIR, "logs"),
     report_to=[],
     logging_strategy="steps",
-    logging_steps=10,
+    logging_steps=2,
     disable_tqdm=False,
     # ------------------------ Data Processing ------------------------ #
     packing=True,
@@ -112,20 +110,21 @@ training_args = SFTConfig(
     dataset_text_field="text",
     label_names=["labels"],
     # ----------------------- Core Training Loop ---------------------- #
-    num_train_epochs=3,
+    num_train_epochs=5,
     max_steps=-1,
     per_device_train_batch_size=8,
     per_device_eval_batch_size=8,
     gradient_accumulation_steps=4,  # Effective batch sizes = 32
     dataloader_pin_memory=True,
     # -------------------- Evaluation & Checkpoints ------------------- #
-    eval_strategy="epoch",
+    eval_strategy="steps",
+    eval_steps=5,
     save_strategy="epoch",
     load_best_model_at_end=True,
     metric_for_best_model="eval_loss",
     save_total_limit=2,
     # ------------------------- Optimization -------------------------- #
-    learning_rate=2e-5,
+    learning_rate=1e-5,
     lr_scheduler_type="linear",
     warmup_ratio=0.05,
     weight_decay=0.001,

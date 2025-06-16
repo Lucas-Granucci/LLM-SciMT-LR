@@ -1,21 +1,20 @@
 import os
+import json
 from tqdm import tqdm
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from config import *
 
-DATASET_UTILIZATION = 0.033  # amount of entire dataset used
-
 # =============================== Load evaluation data =============================== #
 
 
 def load_evaluation_data():
     with open(f"{DATA_DIR}/test_source.txt", "r", encoding="utf-8") as file:
-        source = file.readlines()
+        source = [json.loads(line) for line in file]
 
     with open(f"{DATA_DIR}/test_target.txt", "r", encoding="utf-8") as file:
-        target = file.readlines()
+        target = [json.loads(line) for line in file]
 
     data = [{"source": s.strip(), "target": t.strip()} for s, t in zip(source, target)]
     data = data[: int(len(data) * DATASET_UTILIZATION)]
@@ -131,4 +130,5 @@ predictions, references = batch_generate_predictions(eval_data, batch_size=16)
 # Save predictions
 predictions_path = os.path.join(DATA_DIR, "predictions.txt")
 with open(predictions_path, "w", encoding="utf-8") as file:
-    file.write("\n".join(predictions))
+    for pred in predictions:
+        file.write(json.dumps(pred) + "\n")

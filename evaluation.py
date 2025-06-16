@@ -1,4 +1,5 @@
 import os
+import json
 import sacrebleu
 from config import *
 
@@ -8,10 +9,10 @@ predictions_path = os.path.join(DATA_DIR, "predictions.txt")
 references_path = os.path.join(DATA_DIR, "test_target.txt")
 
 with open(predictions_path, encoding="utf-8") as file:
-    predictions = file.readlines()
+    predictions = [json.loads(line) for line in file]
 
 with open(references_path, encoding="utf-8") as file:
-    references = file.readlines()
+    references = [json.loads(line) for line in file]
 
 cutoff = min(len(references), len(predictions))
 references = references[:cutoff]

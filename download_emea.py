@@ -1,4 +1,5 @@
 import os
+import json
 from datasets import load_dataset
 
 from config import *
@@ -24,7 +25,8 @@ def load_dataset_split(lang_pair):
 
 def save_sentences(save_path, sentences):
     with open(save_path, "w", encoding="utf-8") as file:
-        file.write("\n".join(sentences))
+        for sentence in sentences:
+            file.write(json.dumps(sentence) + "\n")
 
 
 for lang_pair in lang_pairs:
