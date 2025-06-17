@@ -9,21 +9,18 @@ from config import *
 # =============================== Load evaluation data =============================== #
 
 
-def load_evaluation_data():
+def load_source_sentences():
     with open(f"{DATA_DIR}/test_source.txt", "r", encoding="utf-8") as file:
         source = [json.loads(line) for line in file]
 
-    with open(f"{DATA_DIR}/test_target.txt", "r", encoding="utf-8") as file:
-        target = [json.loads(line) for line in file]
+    source_sents = [s.strip() for s in source]
+    source_sents = source_sents[: int(len(source_sents) * DATASET_UTILIZATION)]
 
-    data = [{"source": s.strip(), "target": t.strip()} for s, t in zip(source, target)]
-    data = data[: int(len(data) * DATASET_UTILIZATION)]
-
-    return data
+    return source_sents
 
 
-eval_data = load_evaluation_data()
-logging.info(f"Loaded {len(eval_data)} evaluation examples.")
+source_sentences = load_source_sentences()
+logging.info(f"Loaded {len(source_sentences)} evaluation examples.")
 
 # ============================= Load model and tokenizer ============================= #
 
@@ -49,8 +46,8 @@ model.eval()
 # =============================== Formatting Functions =============================== #
 
 
-def create_eval_prompt(example):
-    return f"{SOURCE_LANG}:{example['source']}\n{TARGET_LANG}:"
+def create_eval_prompt(source_sent):
+    return f"{SOURCE_LANG}:{source_sent}\n{TARGET_LANG}:"
 
 
 def extract_prediction(full_output, prompt):
@@ -58,15 +55,14 @@ def extract_prediction(full_output, prompt):
 
 
 # ============================== Batch Evaluation Logic ============================== #
-def batch_generate_predictions(data, batch_size=16):
-    references = [None] * len(data)
-    predictions = [None] * len(data)
+def batch_generate_predictions(source_sents, batch_size=16):
+    predictions = [None] * len(source_sents)
 
     # Attach indices to store final predictions in original order
-    indexed_samples = [(i, item) for i, item in enumerate(data)]
+    indexed_samples = [(i, sent) for i, sent in enumerate(source_sents)]
 
     # Sort by length for efficient padding
-    indexed_sorted_samples = sorted(indexed_samples, key=lambda x: len(x[1]["source"]))
+    indexed_sorted_samples = sorted(indexed_samples, key=lambda x: len(x[1]))
 
     # Process batched data in sorted order
     batches_generator = range(0, len(indexed_sorted_samples), batch_size)
@@ -74,11 +70,11 @@ def batch_generate_predictions(data, batch_size=16):
 
         current_batch = indexed_sorted_samples[i : i + batch_size]
 
-        # Extract original indices and batch sentence pairs
-        original_indices = [item[0] for item in current_batch]
-        batch_items = [item[1] for item in current_batch]
+        # Extract original indices and source sentences
+        original_indices = [sample[0] for sample in current_batch]
+        batch_sents = [sample[1] for sample in current_batch]
 
-        eval_prompts = [create_eval_prompt(item) for item in batch_items]
+        eval_prompts = [create_eval_prompt(sent) for sent in batch_sents]
 
         inputs = tokenizer(
             eval_prompts,
@@ -108,24 +104,20 @@ def batch_generate_predictions(data, batch_size=16):
         decoded = tokenizer.batch_decode(outputs, skip_special_tokens=True)
         batch_preds = [extract_prediction(d, p) for d, p in zip(decoded, eval_prompts)]
 
-        # Extract target sentences
-        batch_targets = [item["target"] for item in batch_items]
-
         # Store predictions and references in the original order
-        for index, pred, ref in zip(original_indices, batch_preds, batch_targets):
+        for index, pred in zip(original_indices, batch_preds):
             predictions[index] = pred
-            references[index] = ref
 
         # Free GPU memory
         del inputs, outputs
         torch.cuda.empty_cache()
 
-    return predictions, references
+    return predictions
 
 
 # =============================== Generate Predictions =============================== #
 logging.info("Generating predictions...")
-predictions, references = batch_generate_predictions(eval_data, batch_size=16)
+predictions = batch_generate_predictions(source_sentences, batch_size=32)
 
 # Save predictions
 predictions_path = os.path.join(DATA_DIR, "predictions.txt")
